@@ -1,0 +1,168 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+
+/*Creando estructura del cuerpo celeste*/
+struct Objeto {
+    char id[50];
+    double masa;
+    double perihelioX;
+    double perihelioY;
+    double afelioX;
+    double afelioY;
+    double inicioX;
+    double inicioY;
+};
+/*estructura para las consultas*/
+struct Consulta {
+    char idConsulta[50];
+    char idObjeto[50];
+    double tiempo;
+};
+/*Enumeracion con las dos posibles operaciones*/
+typedef enum {
+    Descripcion,
+    Consulta
+} TipoObjeto;
+
+/*Funcion para crear lineas de descripcion o de consulta*/
+void procesarLinea(const char* linea, TipoObjeto tipo, struct Objeto** objetos, struct Consulta** consultas, int* numObjetos, int* numConsultas) {
+    char copiaLinea[256];
+    strcpy(copiaLinea, linea);
+    /*contenido de las lineas de descripcion*/
+    char* token = strtok(copiaLinea, ",");
+    if (tipo == Descripcion) {
+        char id[50];
+        char masa[50];
+        char perihelioX[50];
+        char perihelioY[50];
+        char afelioX[50];
+        char afelioY[50];
+        char inicioX[50];
+        char inicioY[50];
+        
+        /*Reasignacion de las variables*/
+        strcpy(id, token);
+        token = strtok(NULL, ",");
+        strcpy(masa, token);
+        token = strtok(NULL, ",");
+        strcpy(perihelioX, token);
+        token = strtok(NULL, ",");
+        strcpy(perihelioY, token);
+        token = strtok(NULL, ",");
+        strcpy(afelioX, token);
+        token = strtok(NULL, ",");
+        strcpy(afelioY, token);
+        token = strtok(NULL, ",");
+        strcpy(inicioX, token);
+        token = strtok(NULL, ",");
+        strcpy(inicioY, token);
+        
+        /*cambio de tipo de los datos del objetos*/
+        struct Objeto objeto;
+        strcpy(objeto.id, id);
+        objeto.masa = atof(masa);
+        objeto.perihelioX = atof(perihelioX);
+        objeto.perihelioY = atof(perihelioY);
+        objeto.afelioX = atof(afelioX);
+        objeto.afelioY = atof(afelioY);
+        objeto.inicioX = atof(inicioX);
+        objeto.inicioY = atof(inicioY);
+
+    /*Punteros para manipular la estructura de objetos*/
+        (*objetos) = (struct Objeto*)realloc((*objetos), (*numObjetos + 1) * sizeof(struct Objeto));
+        (*objetos)[*numObjetos] = objeto;
+        (*numObjetos)++;
+    } else if (tipo == Consulta) {
+        char idConsulta[50];
+        char idObjeto[50];
+        char tiempo[50];
+
+    /*Reasignacion de los elementos de las lineas de Consulta*/
+        strcpy(idConsulta, token);
+        token = strtok(NULL, ",");
+        strcpy(idObjeto, token);
+        token = strtok(NULL, ",");
+        strcpy(tiempo, token);
+
+        
+        struct Consulta consulta;
+        strcpy(consulta.idConsulta, idConsulta);
+        strcpy(consulta.idObjeto, idObjeto);
+        consulta.tiempo = atof(tiempo);
+        
+    /*Punteros para manipular las consultas*/
+        (*consultas) = (struct Consulta*)realloc((*consultas), (*numConsultas + 1) * sizeof(struct Consulta));
+        (*consultas)[*numConsultas] = consulta;
+        (*numConsultas)++;
+    }
+}
+/*Funcion para realizar calculo segun el modelo de Kepler*/
+void calcularPosicion(struct Objeto objeto, double tiempo) {
+    double periodo = sqrt(pow(objeto.afelioX - objeto.perihelioX, 2) + pow(objeto.afelioY - objeto.perihelioY, 2));
+    double posicionX = objeto.inicioX + ((objeto.afelioX - objeto.inicioX) * (tiempo / periodo));
+    double posicionY = objeto.inicioY + ((objeto.afelioY - objeto.inicioY) * (tiempo / periodo));
+
+    printf("Posición del objeto después de %.2lf unidades de tiempo:\n", tiempo);
+    printf("Posición X: %.2lf\n", posicionX);
+    printf("Posición Y: %.2lf\n", posicionY);
+}
+
+/*Funcion para borrar memoria*/
+void liberarMemoria(struct Objeto* objetos, struct Consulta* consultas) {
+    free(objetos);
+    free(consultas);
+}
+
+int main() {
+    FILE* inputFile = fopen("entrada.txt", "r"); /*Archivo de objetos*/
+    FILE* outputFile = fopen("salida.txt", "w"); /*Archivo de consultas*/
+    char line[256];
+
+    /*Definicion del tipo de objeto*/
+    TipoObjeto tipoActual = Descripcion;
+    struct Objeto* objetos = NULL;
+    struct Consulta* consultas = NULL;
+    int numObjetos = 0;
+    int numConsultas = 0;
+
+    /*Ciclo while para identificar si es un objeto o una consulta*/
+    while (fgets(line, sizeof(line), inputFile)) {
+        line[strcspn(line, "\r\n")] = '\0';  // Eliminar el salto de línea
+
+        if (strcmp(line, "[descripcion]") == 0) {
+            tipoActual = Descripcion;
+        } else if (strcmp(line, "[consultas]") == 0) {
+            tipoActual = Consulta;
+        } else {
+            procesarLinea(line, tipoActual, &objetos, &consultas, &numObjetos, &numConsultas);
+        }
+    }
+
+    // Realizar operaciones con los objetos y consultas (por ejemplo, escribirlos en el archivo de salida)
+    for (int i = 0; i < numObjetos; i++) {
+        struct Objeto objeto = objetos[i];
+        //fprintf(outputFile, "ID: %s\n", objeto.id);
+        //fprintf(outputFile, "Masa: %lf\n", objeto.masa);
+        // ... escribir el resto de los campos del objeto
+        //fprintf(outputFile, "\n");
+        
+    }
+    /*ciclo para imprimir las consultas con la informacion*/
+    for (int i = 0; i < numConsultas; i++) {
+        struct Consulta consulta = consultas[i];
+        fprintf(outputFile, "ID Consulta: %s\n", consulta.idConsulta);
+        fprintf(outputFile, "ID Objeto: %s\n", consulta.idObjeto);
+        fprintf(outputFile, "Tiempo: %lf\n", consulta.tiempo);
+        fprintf(outputFile, "\n");
+        calcularPosicion(objetos[i], consulta.tiempo); 
+    }
+    /*llamado de funcion para Liberar la memoria de los datos utilizados*/
+    liberarMemoria(objetos, consultas);
+
+    fclose(inputFile);
+    fclose(outputFile);
+
+    return 0;
+}
